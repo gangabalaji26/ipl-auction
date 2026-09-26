@@ -9,7 +9,6 @@ import AuctionRoom from './pages/AuctionRoom'
 import AuctionSummary from './pages/AuctionSummary'
 import './index.css'
 import Lobby from './pages/Lobby'
-import FantasyAdmin from './pages/FantasyAdmin'
 
 function App() {
   return (
@@ -24,7 +23,6 @@ function App() {
                 <Route path="/lobby/:id" element={<Lobby />} />
                 <Route path="/auction/:id" element={<AuctionRoom />} />
                 <Route path="/summary/:id" element={<AuctionSummary />} />
-                <Route path="/admin/fantasy" element={<FantasyAdmin />} />
               </Routes>
             </div>
           </AuctionProvider>

@@ -43,6 +43,17 @@ const SquadPreview = ({
     { name: 'Bowler', icon: Shield, color: 'text-blue-500', bg: 'bg-blue-500/10' }
   ];
 
+  const getPlayerAverage = (player) => {
+    const fantasyAvg = playerStats[player.id]?.matches
+      ? (Number(playerStats[player.id].totalPoints || 0) / Number(playerStats[player.id].matches || 0))
+      : null;
+
+    if (fantasyAvg !== null && Number.isFinite(fantasyAvg)) return fantasyAvg.toFixed(1);
+
+    const staticAvg = Number(player?.stats?.avg ?? player?.avg ?? 0);
+    return Number.isFinite(staticAvg) ? staticAvg.toFixed(1) : '0.0';
+  };
+
   if (!currentSquad) {
     return (
       <div className="bg-white/[0.02] border border-white/5 p-16 rounded-[2.5rem] text-center">
@@ -126,11 +137,9 @@ const SquadPreview = ({
                           </h4>
                           <div className="flex items-center gap-2">
                             <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{player.teamId} • {player.type}</p>
-                            {playerStats[player.id] && (
-                              <span className="text-[8px] font-black text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded leading-none">
-                                Avg: {((playerStats[player.id].matches || 0) ? (Number(playerStats[player.id].totalPoints || 0) / Number(playerStats[player.id].matches || 0)).toFixed(1) : '0.0')}
-                              </span>
-                            )}
+                            <span className="text-[8px] font-black text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded leading-none">
+                              Avg: {getPlayerAverage(player)}
+                            </span>
                           </div>
                        </div>
                        {(isCaptain || isVice) && (

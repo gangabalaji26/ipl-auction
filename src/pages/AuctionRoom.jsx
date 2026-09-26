@@ -152,6 +152,12 @@ const AuctionRoom = () => {
       return IPL_PLAYERS.find(p => p.id === displayAuctionState?.playerId) || IPL_PLAYERS[0];
    }, [displayAuctionState?.playerId]);
 
+   const getDisplayAverage = (player) => {
+      if (!player) return 0;
+      const avgValue = Number(player?.stats?.avg ?? player?.avg ?? player?.average ?? 0);
+      return Number.isFinite(avgValue) ? avgValue : 0;
+   };
+
    const [isTtsEnabled, setIsTtsEnabled] = useState(true);
    const [ttsSpeed, setTtsSpeed] = useState(1.15); // configurable pace
    const [ttsPitch, setTtsPitch] = useState(0.95); // configurable pitch
@@ -1064,8 +1070,9 @@ const AuctionRoom = () => {
                                           </div>
                                           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-white leading-none">{currentPlayer.name}</h2>
                                        </div>
-                                       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 bg-white/[0.02] p-2.5 sm:p-3 md:p-4 rounded-2xl border border-white/[0.04] backdrop-blur-md">
+                                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 bg-white/[0.02] p-2.5 sm:p-3 md:p-4 rounded-2xl border border-white/[0.04] backdrop-blur-md">
                                           <div className="text-center"><span className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Matches</span><span className="text-lg sm:text-xl font-bold text-gray-100">{currentPlayer.stats?.matches || 0}</span></div>
+                                          <div className="text-center border-l border-white/5"><span className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Avg</span><span className="text-lg sm:text-xl font-bold text-emerald-400">{getDisplayAverage(currentPlayer).toFixed(1)}</span></div>
                                           {currentPlayer.stats?.runs !== undefined && (<div className="text-center border-l border-white/5"><span className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Runs</span><span className="text-lg sm:text-xl font-bold text-yellow-500">{currentPlayer.stats.runs}</span></div>)}
                                           {currentPlayer.stats?.sr !== undefined && (<div className="text-center border-l border-white/5"><span className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">S.Rate</span><span className="text-lg sm:text-xl font-bold text-gray-100">{currentPlayer.stats.sr}</span></div>)}
                                           {currentPlayer.stats?.wickets !== undefined && (<div className="text-center border-l border-white/5"><span className="block text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Wkts</span><span className="text-lg sm:text-xl font-bold text-green-500">{currentPlayer.stats.wickets}</span></div>)}
@@ -1340,10 +1347,17 @@ const AuctionRoom = () => {
                                                    </div>
                                                 </div>
                                              </div>
-                                             <div className="bg-black/40 px-2 py-1 rounded-lg border border-white/5 text-center">
-                                                <span className="text-[9px] sm:text-[10px] font-black text-yellow-500">
-                                                   ₹{p.basePrice.toFixed(2)} Cr
-                                                </span>
+                                             <div className="bg-black/40 px-2 py-1 rounded-lg border border-white/5 text-center space-y-1">
+                                                <div>
+                                                   <span className="text-[9px] sm:text-[10px] font-black text-yellow-500">
+                                                      ₹{p.basePrice.toFixed(2)} Cr
+                                                   </span>
+                                                </div>
+                                                <div>
+                                                   <span className="text-[8px] font-black text-emerald-400">
+                                                      Avg: {(Number(p?.stats?.avg ?? 0)).toFixed(1)}
+                                                   </span>
+                                                </div>
                                              </div>
                                           </div>
                                        ))}
@@ -1366,10 +1380,17 @@ const AuctionRoom = () => {
                                           </div>
                                        </div>
                                     </div>
-                                    <div className="bg-black/40 px-2 py-1 rounded-lg border border-white/5 text-center">
-                                       <span className="text-[9px] sm:text-[10px] font-black text-yellow-500">
-                                          ₹{(activeOverlayTab === 'sold' || activeOverlayTab === 'leaderboard' ? p.bid : p.basePrice).toFixed(2)} Cr
-                                       </span>
+                                    <div className="bg-black/40 px-2 py-1 rounded-lg border border-white/5 text-center space-y-1">
+                                       <div>
+                                          <span className="text-[9px] sm:text-[10px] font-black text-yellow-500">
+                                             ₹{(activeOverlayTab === 'sold' || activeOverlayTab === 'leaderboard' ? p.bid : p.basePrice).toFixed(2)} Cr
+                                          </span>
+                                       </div>
+                                       <div>
+                                          <span className="text-[8px] font-black text-emerald-400">
+                                             Avg: {(Number(p?.stats?.avg ?? 0)).toFixed(1)}
+                                          </span>
+                                       </div>
                                     </div>
                                  </div>
                               ))}
