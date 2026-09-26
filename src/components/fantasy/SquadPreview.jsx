@@ -18,6 +18,7 @@ const SquadPreview = ({
   ownedPlayers = [], 
   currentSquad = null, 
   playerStats = {},
+  playerMatches = {},
   onEdit, 
   isLocked = false 
 }) => {
@@ -44,10 +45,11 @@ const SquadPreview = ({
   ];
 
   const getPlayerAverage = (player) => {
-    const fantasyAvg = playerStats[player.id]?.matches
-      ? (Number(playerStats[player.id].totalPoints || 0) / Number(playerStats[player.id].matches || 0))
-      : null;
+    const stats = playerStats[player.id] || {};
+    const matchCount = Number(stats.matches ?? playerMatches[player.id] ?? 0) || 0;
+    const totalPoints = Number(stats.totalPoints ?? stats.points ?? 0) || 0;
 
+    const fantasyAvg = matchCount > 0 ? (totalPoints / matchCount) : null;
     if (fantasyAvg !== null && Number.isFinite(fantasyAvg)) return fantasyAvg.toFixed(1);
 
     const staticAvg = Number(player?.stats?.avg ?? player?.avg ?? 0);

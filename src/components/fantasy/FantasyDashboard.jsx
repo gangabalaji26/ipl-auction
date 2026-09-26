@@ -8,7 +8,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, rtdb } from '../../lib/firebase';
 import { ref, onValue, update as updateRtdb, set as setRtdb, get as getRtdb } from 'firebase/database';
-import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, getDocs, query, where } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { useQuota } from '../../contexts/QuotaContext';
 
@@ -23,6 +23,8 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
   const [allSquads, setAllSquads] = useState([]);
   const [playerPoints, setPlayerPoints] = useState({});
   const [playerStats, setPlayerStats] = useState({});
+  const [playerMatches, setPlayerMatches] = useState({});
+  const [syncStatus, setSyncStatus] = useState('loading');
   const [isSaving, setIsSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
@@ -49,28 +51,56 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
 
 
   const resolvePlayerStats = useMemo(() => (playerId) => {
-    const raw = playerStats[playerId] ?? playerPoints[playerId] ?? { totalPoints: 0, matches: 0 };
+    const rawStats = playerStats[playerId];
+    const rawPoints = playerPoints[playerId];
+    const rawMatches = playerMatches[playerId];
 
-    if (typeof raw === 'number') {
+    const statsMatches = Number(rawStats?.matches ?? rawMatches ?? 0) || 0;
+    const totalPointsFromStats = Number(rawStats?.totalPoints ?? rawStats?.points ?? 0) || 0;
+
+    if (rawStats && typeof rawStats === 'object') {
       return {
-        totalPoints: Number(raw) || 0,
-        matches: 0,
+        totalPoints: totalPointsFromStats,
+        matches: statsMatches,
       };
     }
 
-    return {
-      totalPoints: Number(raw.totalPoints ?? raw.points ?? 0) || 0,
-      matches: Number(raw.matches ?? raw.matchCount ?? 0) || 0,
-    };
-  }, [playerStats, playerPoints]);
+    if (typeof rawPoints === 'number') {
+      const pointValue = Number(rawPoints) || 0;
+      const matchCount = Number(rawMatches || statsMatches || 0) || 0;
+
+      if (matchCount > 0 && pointValue < 1000) {
+        return {
+          totalPoints: pointValue * matchCount,
+          matches: matchCount,
+        };
+      }
+
+      return {
+        totalPoints: pointValue,
+        matches: matchCount,
+      };
+    }
+
+    if (rawPoints && typeof rawPoints === 'object') {
+      const total = Number(rawPoints.totalPoints ?? rawPoints.points ?? 0) || 0;
+      const matches = Number(rawPoints.matches ?? rawPoints.matchCount ?? rawMatches ?? 0) || 0;
+      return { totalPoints: total, matches };
+    }
+
+    return { totalPoints: 0, matches: 0 };
+  }, [playerStats, playerPoints, playerMatches]);
 
   const calculatedLeaderboard = useMemo(() => {
     const auctionPlayers = currentAuction?.players || [];
 
-    return allSquads.map(squad => {
-      const { userId, userName, teamId, players = [], captain, viceCaptain, impactPlayer } = squad;
+    return (Array.isArray(allSquads) ? allSquads : []).map(squad => {
+      const safeSquad = squad || {};
+      const { userId, userName, teamId, players = [], captain, viceCaptain, impactPlayer } = safeSquad;
 
-      const normalizedPlayers = players.map(p => typeof p === 'string' ? p : (p?.id || p));
+      const normalizedPlayers = Array.isArray(players)
+        ? players.map(p => typeof p === 'string' ? p : (p?.id || p))
+        : [];
       const captainId = typeof captain === 'string' ? captain : (captain?.id || captain);
       const viceCaptainId = typeof viceCaptain === 'string' ? viceCaptain : (viceCaptain?.id || viceCaptain);
       const impactId = typeof impactPlayer === 'string' ? impactPlayer : (impactPlayer?.id || impactPlayer);
@@ -123,6 +153,9 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
 
  
   const { handleFirebaseError } = useQuota();
+  const hasFantasyData = useMemo(() => {
+    return Object.keys(playerPoints).length > 0 || Object.keys(playerStats).length > 0 || Object.keys(playerMatches).length > 0;
+  }, [playerPoints, playerStats, playerMatches]);
 
   useEffect(() => {
     if (!auctionId || !user?.uid) return;
@@ -220,20 +253,41 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
     // 3. Player points & stats from Firestore (live updates, not one-time snapshot)
     const ppRef = doc(db, 'fantasyConfig', 'playerPoints');
     const statsRef = doc(db, 'fantasyConfig', 'playerStats');
+    const matchesRef = doc(db, 'fantasyConfig', 'playerMatches');
 
     const unsubPlayerPoints = onSnapshot(ppRef, (snap) => {
-      setPlayerPoints(snap.exists() ? snap.data() : {});
-    }, (err) => handleFirebaseError(err));
+      const nextData = snap.exists() ? snap.data() : {};
+      setPlayerPoints(nextData);
+      setSyncStatus('live');
+    }, (err) => {
+      setSyncStatus('offline');
+      handleFirebaseError(err);
+    });
 
     const unsubPlayerStats = onSnapshot(statsRef, (snap) => {
-      setPlayerStats(snap.exists() ? snap.data() : {});
-    }, (err) => handleFirebaseError(err));
+      const nextData = snap.exists() ? snap.data() : {};
+      setPlayerStats(nextData);
+      setSyncStatus('live');
+    }, (err) => {
+      setSyncStatus('offline');
+      handleFirebaseError(err);
+    });
+
+    const unsubPlayerMatches = onSnapshot(matchesRef, (snap) => {
+      const nextData = snap.exists() ? snap.data() : {};
+      setPlayerMatches(nextData);
+      setSyncStatus('live');
+    }, (err) => {
+      setSyncStatus('offline');
+      handleFirebaseError(err);
+    });
 
     return () => {
       unsubMySquad();
       unsubAllSquads();
       unsubPlayerPoints();
       unsubPlayerStats();
+      unsubPlayerMatches();
     };
 
   }, [auctionId, user, handleFirebaseError]);
@@ -301,6 +355,7 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
                 ownedPlayers={ownedPlayers} 
                 currentSquad={userSquad}
                 playerStats={playerStats}
+                playerMatches={playerMatches}
                 onSave={handleSaveSquad}
               />
             ) : (
@@ -308,6 +363,7 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
                 ownedPlayers={ownedPlayers}
                 currentSquad={userSquad}
                 playerStats={playerStats}
+                playerMatches={playerMatches}
                 onEdit={() => setIsEditing(true)}
               />
             )}
