@@ -12,9 +12,6 @@ import { doc, getDoc, collection, getDocs, query, where } from 'firebase/firesto
 import { useAuth } from '../../contexts/AuthContext';
 import { useQuota } from '../../contexts/QuotaContext';
 
-let cachedPlayerPoints = null;
-let cachedPlayerStats = null;
-
 import { IPL_PLAYERS } from '../../data/players';
 import { TEAMS } from '../../data/teams';
 import SquadSelector from './SquadSelector';
@@ -220,34 +217,23 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
       }
     }, (err) => handleFirebaseError(err));
 
-    // 3. Player points & stats from Firestore (cached single getDoc)
-    if (cachedPlayerPoints) {
-      setPlayerPoints(cachedPlayerPoints);
-    } else {
-      const ppRef = doc(db, 'fantasyConfig', 'playerPoints');
-      getDoc(ppRef).then(snap => {
-        if (snap.exists()) {
-          cachedPlayerPoints = snap.data();
-          setPlayerPoints(cachedPlayerPoints);
-        }
-      }).catch(handleFirebaseError);
-    }
+    // 3. Player points & stats from Firestore (live updates, not one-time snapshot)
+    const ppRef = doc(db, 'fantasyConfig', 'playerPoints');
+    const statsRef = doc(db, 'fantasyConfig', 'playerStats');
 
-    if (cachedPlayerStats) {
-      setPlayerStats(cachedPlayerStats);
-    } else {
-      const statsRef = doc(db, 'fantasyConfig', 'playerStats');
-      getDoc(statsRef).then(snap => {
-        if (snap.exists()) {
-          cachedPlayerStats = snap.data();
-          setPlayerStats(cachedPlayerStats);
-        }
-      }).catch(handleFirebaseError);
-    }
+    const unsubPlayerPoints = onSnapshot(ppRef, (snap) => {
+      setPlayerPoints(snap.exists() ? snap.data() : {});
+    }, (err) => handleFirebaseError(err));
+
+    const unsubPlayerStats = onSnapshot(statsRef, (snap) => {
+      setPlayerStats(snap.exists() ? snap.data() : {});
+    }, (err) => handleFirebaseError(err));
 
     return () => {
       unsubMySquad();
       unsubAllSquads();
+      unsubPlayerPoints();
+      unsubPlayerStats();
     };
 
   }, [auctionId, user, handleFirebaseError]);
