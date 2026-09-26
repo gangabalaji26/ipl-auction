@@ -121,7 +121,7 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
         avgPoints: Number(avgPoints.toFixed(1)),
         playerCount: normalizedPlayers.length,
       };
-    }).sort((a, b) => b.avgPoints - a.avgPoints || b.totalPoints - a.totalPoints);
+    }).sort((a, b) => b.totalPoints - a.totalPoints || b.avgPoints - a.avgPoints);
   }, [allSquads, resolvePlayerStats, currentAuction, user]);
 
  
@@ -398,18 +398,22 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
                            <div className="text-left sm:text-right sm:border-r border-white/5 sm:pr-8">
                               <div className="flex flex-col items-start sm:items-center">
                                  <span className={`text-2xl sm:text-4xl font-black leading-none ${
-                                   entry.avgPoints > 0 && idx < 3 ? 'text-[#ff5500] drop-shadow-[0_0_20px_rgba(255,85,0,0.3)]' : entry.avgPoints > 0 ? 'text-blue-500' : 'text-gray-600'
+                                   entry.totalPoints > 0 && idx < 3 ? 'text-[#ff5500] drop-shadow-[0_0_20px_rgba(255,85,0,0.3)]' : entry.totalPoints > 0 ? 'text-blue-500' : 'text-gray-600'
                                  }`}>
-                                   {entry.avgPoints}
+                                   {entry.totalPoints}
                                  </span>
                                  <span className="text-[7px] sm:text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">
-                                    {entry.avgPoints > 0 ? 'AVG POINTS' : 'AWAITING'}
+                                    {entry.totalPoints > 0 ? 'TOTAL POINTS' : 'AWAITING'}
                                  </span>
+                                 <div className="mt-1 flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black text-gray-400">
+                                   <span>{entry.avgPoints}</span>
+                                   <span className="uppercase tracking-widest">avg</span>
+                                 </div>
                               </div>
                            </div>
 
                            {/* Rank Indicator Badge */}
-                           {idx < 3 && entry.avgPoints > 0 ? (
+                           {idx < 3 && entry.totalPoints > 0 ? (
                              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center shadow-lg border shrink-0 ${
                                idx === 0 ? 'bg-yellow-500/20 border-yellow-500/30 text-yellow-500' :
                                idx === 1 ? 'bg-gray-400/20 border-gray-400/30 text-gray-300' :
