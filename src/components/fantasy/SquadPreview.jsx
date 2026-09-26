@@ -128,7 +128,7 @@ const SquadPreview = ({
                             <p className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{player.teamId} • {player.type}</p>
                             {playerStats[player.id] && (
                               <span className="text-[8px] font-black text-blue-500 bg-blue-500/10 px-1.5 py-0.5 rounded leading-none">
-                                Avg: {(playerStats[player.id].totalPoints / playerStats[player.id].matches).toFixed(1)}
+                                Avg: {((playerStats[player.id].matches || 0) ? (Number(playerStats[player.id].totalPoints || 0) / Number(playerStats[player.id].matches || 0)).toFixed(1) : '0.0')}
                               </span>
                             )}
                           </div>

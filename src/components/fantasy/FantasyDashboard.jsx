@@ -51,6 +51,22 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
   }, [userTeamDoc]);
 
 
+  const resolvePlayerStats = useMemo(() => (playerId) => {
+    const raw = playerStats[playerId] ?? playerPoints[playerId] ?? { totalPoints: 0, matches: 0 };
+
+    if (typeof raw === 'number') {
+      return {
+        totalPoints: Number(raw) || 0,
+        matches: 0,
+      };
+    }
+
+    return {
+      totalPoints: Number(raw.totalPoints ?? raw.points ?? 0) || 0,
+      matches: Number(raw.matches ?? raw.matchCount ?? 0) || 0,
+    };
+  }, [playerStats, playerPoints]);
+
   const calculatedLeaderboard = useMemo(() => {
     const auctionPlayers = currentAuction?.players || [];
 
@@ -67,10 +83,10 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
       let totalMatches = 0;
 
       normalizedPlayers.forEach(pId => {
-        const stats = playerStats[pId] || { totalPoints: 0, matches: 0 };
+        const stats = resolvePlayerStats(pId);
         const pts = stats.totalPoints || 0;
         const matches = stats.matches || 0;
-        
+
         if (pId === captainId) totalPoints += pts * 2;
         else if (pId === viceCaptainId) totalPoints += pts * 1.5;
         else totalPoints += pts;
@@ -80,13 +96,13 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
 
       // Impact player points
       if (impactId && !normalizedPlayers.includes(impactId)) {
-        const stats = playerStats[impactId] || { totalPoints: 0, matches: 0 };
+        const stats = resolvePlayerStats(impactId);
         totalPoints += stats.totalPoints || 0;
         totalMatches += stats.matches || 0;
       }
 
       // Calculate average
-      const avgPoints = totalMatches > 0 ? (totalPoints / (normalizedPlayers.length + (impactId ? 1 : 0))) : 0;
+      const avgPoints = totalMatches > 0 ? (totalPoints / (normalizedPlayers.length + (impactId && !normalizedPlayers.includes(impactId) ? 1 : 0))) : 0;
 
       // Resolve manager name from multiple sources
       const auctionPlayer = auctionPlayers.find(p => p.uid === userId || p.team === teamId);
@@ -106,7 +122,7 @@ const FantasyDashboard = ({ auctionId, user, roomTeams = [], currentAuction }) =
         playerCount: normalizedPlayers.length,
       };
     }).sort((a, b) => b.avgPoints - a.avgPoints || b.totalPoints - a.totalPoints);
-  }, [allSquads, playerStats, currentAuction, user]);
+  }, [allSquads, resolvePlayerStats, currentAuction, user]);
 
  
   const { handleFirebaseError } = useQuota();
